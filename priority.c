@@ -5,14 +5,20 @@
 static SymbolKey _parse_parenthesis(ParseNode* head, char** str) {
   return CLS_PAR;
 }
-static bool _node_less_priority(ParseNode* node, SymbolKey key, Symbol symbol) {
-  return (key != NONE) && (node->operator < symbol.operator);
+static bool _node_less_priority(ParseNode* node, Symbol symbol) {
+  return node->operator < symbol.operator;
 }
 
-Error parse_expression(ParseNode* node, char* str) {
+ParseNode* parse_expression(char* str, Error* error) {
   char* pos = str;
 
+  // Assume no error occurs
+  *error = (Error) {
+    .isError = false,
+  };
+
   // Set the first node as empty
+  ParseNode* node = malloc(sizeof(*node));
   *node = (ParseNode) {
     .operator = NOP,
     .prev     = NULL,
@@ -26,58 +32,77 @@ Error parse_expression(ParseNode* node, char* str) {
   node->leftKey = parse_symbol(&pos, &node->leftSymbol);
   switch (node->leftKey) {
     case NONE:
-      return (Error) {.isError = false};
+      // free(node);
+      *error = (Error) {
+        .isError = true,
+        .message = "no expression to parse",
+        .startIdx = 0,
+        .endIdx = 1,
+      };
+      return NULL;
     case OPRTR:
-      return (Error) {
+      free(node);
+      *error = (Error) {
         .isError = true,
         .message = "illegal operator at start of expression",
         .startIdx = pos-str-1,
         .endIdx = pos-str,
       };
+      return NULL;
     case CLS_PAR:
-      return (Error) {
+      free(node);
+      *error = (Error) {
         .isError = true,
         .message = "illegal close brace with no opening argument",
         .startIdx = pos-str-1,
         .endIdx = pos-str,
       };
+      return NULL;
     case OPN_PAR:
       node->leftKey = _parse_parenthesis(node, &pos);
       if (node->leftKey == NONE) {
-        return (Error) {
+        free(node);
+        *error = (Error) {
           .isError = true,
           .message = "illegal open brace with no closing argument",
           .startIdx = pos-str-1,
           .endIdx = pos-str,
         };
+        return NULL;
       }
     default:
       break;
   }
 
+  // Ensure the next symbol is an operator
   Symbol symbol;
   SymbolKey key = parse_symbol(&pos, &symbol);
   switch (key) {
     case NONE:
       // Only one symbol in parsed expression
-      return (Error) {.isError = false};
+      free(node);
+      return NULL;
     case OPRTR:
       // Operator follows parsed symbol
       break;
     default:
-      return (Error) {
+      free(node);
+      *error = (Error) {
         .isError = true,
         .message = "double evaluable argument with no operator",
         .startIdx = pos-str-1,
         .endIdx = pos-str,
       };
+      return NULL;
+  }
+
+  // Convert subtraction to negative addition
+  bool isNeg = false;
+  if (symbol.operator == SUB) {
+    symbol.operator = ADD;
+    isNeg = true;
   }
   node->operator = symbol.operator;
-
-/* THIS LOOP IS NOT CORRECT
-  You need to make sure you malloc a node while making a new operator
-  You have to not malloc a node while inserting a new value
-*/
 
   // Read in the rest of the values
   for (key = parse_symbol(&pos, &symbol);
@@ -85,37 +110,79 @@ Error parse_expression(ParseNode* node, char* str) {
     if (key == OPRTR) {
       // Validate the expression has correct syntax
       if (node->rightKey == NONE && node->right == NULL) {
-        return (Error) {
+        free_expression(node);
+        *error = (Error) {
           .isError = true,
           .message = "double operator with no evaluable argument",
           .startIdx = pos-str-1,
           .endIdx = pos-str,
         };
+        return NULL;
+      }
+
+      // Convert subtraction to negative addition
+      isNeg = false;
+      if (symbol.operator == SUB) {
+        symbol.operator = ADD;
+        isNeg = true;
       }
 
       // Traverse to correct priority node
-      while (node->prev != NULL && _node_less_priority(node, key, symbol)) {
+      while (node->prev != NULL && _node_less_priority(node, symbol)) {
         node = node->prev;
       }
 
-      // Create a new node
-      Symbol temp = node->rightSymbol;
-      node->right = malloc(sizeof(*node));
+      // Make a new head node
+      if (_node_less_priority(node, symbol)) {
+        ParseNode* head = malloc(sizeof(*head));
+        *head = (ParseNode) {
+          .operator = symbol.operator,
+          .prev     = NULL,
+          .leftKey  = NONE,
+          .left     = node,
+          .rightKey = NONE,
+          .right    = NULL,
+        };
 
-      // Build the new tree node
-      *node->right = (ParseNode) {
-        .operator   = symbol.operator,
-        .prev       = node,
-        .leftKey    = node->rightKey,
-        .leftSymbol = temp,
-        .rightKey   = NONE,
-        .right      = NULL,
-      };
+        node->prev = head;
+        node = head;
+      } else {
+        // Create a new tree node
+        Symbol temp = node->rightSymbol;
+        node->right = malloc(sizeof(*node));
 
-      // Adjust the old node
-      node->rightKey = NONE;
-      node = node->right;
+        // Build the new tree node
+        *node->right = (ParseNode) {
+          .operator   = symbol.operator,
+          .prev       = node,
+          .leftKey    = node->rightKey,
+          .leftSymbol = temp,
+          .rightKey   = NONE,
+          .right      = NULL,
+        };
+
+        // Adjust the old node
+        node->rightKey = NONE;
+        node = node->right;
+      }
     } else {
+      // Convert the symbol to the correct sign
+      if (isNeg) {
+        switch (key) {
+          case FLT:
+            symbol.floating = -symbol.floating;
+            break;
+          case INT:
+            symbol.integer = -symbol.integer;
+            break;
+          case VAR:
+            // Set flag in variable to negative
+            break;
+          default:
+            break;
+        }
+      }
+
       // Store the new value in the brance node
       node->rightKey    = key;
       node->rightSymbol = symbol;
@@ -127,76 +194,7 @@ Error parse_expression(ParseNode* node, char* str) {
     node = node->prev;
   }
 
-  return (Error) {.isError = false};
-
-/* Expression to evaluate */
-  // 1 & 3 + 5 * 7
-
-/* IN ORDER */
-  // (1 & 3) + 5 * 7
-  //   AND
-  //  /  \
-  // 1   3
-
-  // 1 & (3 + 5) * 7
-  //   AND
-  //  /   \
-  // 1   ADD
-  //    /   \
-  //   3    5
-
-  // 1 & 3 + (5 * 7)
-  //   AND
-  //  /   \
-  // 1   ADD
-  //    /   \
-  //   3   MULT
-  //      /   \
-  //     5    7
-
-/* REVERSE ORDER */
-  // (7 * 5) + 3 & 1
-  //   MULT
-  //  /   \
-  // 7    5
-
-  // 7 * (5 + 3) & 1
-  //   ADD
-  //  /  \
-  // 5  MULT
-  //   /   \
-  //  7    5
-
-  // 7 * 5 + (3 & 1)
-  //   AND
-  //  /   \
-  // 1   ADD
-  //    /   \
-  //   3   MULT
-  //      /   \
-  //     5    7
-
-/* MIX ORDER */
-  //  (3 + 7) * 5 & 1
-  //   ADD
-  //  /  \
-  // 3   7
-
-  // 3 + (7 * 5) & 1
-  //   ADD
-  //  /  \
-  // 3  MULT
-  //   /   \
-  //  7    5
-
-  // 7 * 5 + (3 & 1)
-  //     AND
-  //    /   \
-  //   ADD  1
-  //  /   \
-  // 3   MULT
-  //    /   \
-  //   7    5
+  return node;
 }
 
 void print_error_report(char* str, Error error) {
@@ -221,7 +219,7 @@ void print_error_report(char* str, Error error) {
   }
 
   // Find the end of the current line
-  uint32_t print_end = error.endIdx+1;
+  uint32_t print_end = error.endIdx-1;
   while (str[print_end] != '\n' && str[print_end] != '\0') {
     print_end += 1;
   }
@@ -230,6 +228,12 @@ void print_error_report(char* str, Error error) {
   fprintf(stderr, TEXT_BOLD "line %u: "
   TEXT_RED "error: " TEXT_BOLD, lineNum);
   fputs(error.message, stderr);
+
+  // Exit before printing error line if no text present
+  if (print_start == print_end) {
+    fprintf(stderr, TEXT_RESET "\n");
+    return;
+  }
 
   // Print the line with the error
   fprintf(stderr, TEXT_RESET "\n  ");

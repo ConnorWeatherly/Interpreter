@@ -135,9 +135,9 @@ static bool _parse_operation(char** pos, Operation* operator) {
     case '^':
       *operator = XOR;
       break;
-    case '~':
-      *operator = NOT;
-      break;
+    // case '~':
+    //   *operator = NOT;
+    //   break;
 
     // Character is not an operation
     default:

@@ -5,6 +5,8 @@
 
 static void _print_operator(Operation operator) {
   switch (operator) {
+    case NOP:
+      break;
     case MLT:
       fputc('*', stderr);
       break;
@@ -26,9 +28,9 @@ static void _print_operator(Operation operator) {
     case XOR:
       fputc('^', stderr);
       break;
-    case NOT:
-      fputc('~', stderr);
-      break;
+    // case NOT:
+    //   fputc('~', stderr);
+    //   break;
     default:
       fprintf(stderr, "Error: Invalid operator\n");
   }
@@ -36,6 +38,8 @@ static void _print_operator(Operation operator) {
 }
 static void _print_symbol(SymbolKey key, Symbol symbol) {
   switch (key) {
+    case NONE:
+      break;
     case OPRTR:
       _print_operator(symbol.operator);
       break;
@@ -47,9 +51,6 @@ static void _print_symbol(SymbolKey key, Symbol symbol) {
       break;
     case VAR:
       fputs(symbol.variable, stderr);
-      break;
-    case NONE:
-      fprintf(stderr, "\n\nError: Type not set\n\n");
       break;
     default:
       fprintf(stderr, "\n\nError: Unknown type\n\n");
@@ -85,18 +86,41 @@ static void _print_expression(ParseNode head) {
   fputc('\n', stderr);
   return;
 }
+static void _print_eval(Evaluation eval) {
+  OperationNode* head = eval.operations;
+  while (head->isLast == false) {
+    _print_symbol(head->value.key, head->value.symbol);
+    _print_operator(head->operator);
+
+    head = head->next;
+  }
+
+  _print_symbol(head->value.key, head->value.symbol);
+  _print_operator(head->operator);
+  _print_symbol(head->endValue.key, head->endValue.symbol);
+
+  fputc('\n', stderr);
+
+  return;
+}
 
 int main(int argc, char** argv) {
-  char* str = "3 + 7 - 8 * 9";
+  char* str = "7 + 3 ^ 9 * 11";
 
-  // MAKE IT SUCH THAT YOU PASS ERROR AND RETURN HEAD
-  ParseNode head;
-  Error error = parse_expression(&head, str);
+  Error error;
+  ParseNode* head = parse_expression(str, &error);
+
   if (error.isError) {
     print_error_report(str, error);
   } else {
-    _print_expression(head);
-    Evaluation evaluation = evaluate(&head);
+    _print_expression(*head);
+    Evaluation evaluation = evaluate(head);
+    if (evaluation.isError) {
+      fputs(evaluation.message, stderr);
+      fputc('\n', stderr);
+    } else {
+      _print_eval(evaluation);
+    }
   }
 
   return EXIT_SUCCESS;

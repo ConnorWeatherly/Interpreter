@@ -14,7 +14,7 @@ typedef struct _ParseNode {
     struct _ParseNode*  left;
     Symbol              leftSymbol;
   };
-  
+
   SymbolKey rightKey;
   union {
     struct _ParseNode*  right;
@@ -37,7 +37,7 @@ typedef struct {
 #define TEXT_RESET  "\x1b[0m"
 
 // Parse expressions from start to end
-Error parse_expression(ParseNode* head, char* str);
+ParseNode* parse_expression(char* str, Error* error);
 
 // Display details of parsing error
 void print_error_report(char* str, Error error);

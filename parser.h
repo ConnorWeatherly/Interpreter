@@ -10,7 +10,8 @@ typedef enum {
 
 // Table of parsable symbols from highest to lowest priority
 typedef enum {
-  NOP, MLT, DIV, ADD, SUB, AND, OR, XOR, NOT
+  NOP, MLT, DIV, ADD, SUB, AND, OR, XOR, // NOT,
+/*   , *  , /  , +  , -  , &  , | , ^  , ~  */
 } Operation;
 
 // Structure wrapped to hold type union
