@@ -10,9 +10,9 @@ static bool _can_traverse_right(ParseNode* node) {
 static bool _can_traverse(ParseNode* node) {
   return _can_traverse_left(node) || _can_traverse_right(node);
 }
-static void _insert_node(OperationNode** node) {
-  return;
-}
+// static void _insert_node(OperationNode** node) {
+//   return;
+// }
 static bool _can_simplify(ParseNode* node) {
   return (node->leftKey != VAR) && (node->rightKey != VAR);
 }
@@ -110,18 +110,17 @@ Evaluation evaluate(ParseNode* head) {
     };
   }
 
-  if (head->prev == NULL) {
-    free(head);
+  // Remove the read node
+  ParseNode* prev = head->prev;
+  free(head);
+  head = prev;
+
+  if (head == NULL) {
     return (Evaluation) {
       .isError    = false,
       .operations = start,
     };
   }
-
-  // Remove the read node
-  ParseNode* prev = head->prev;
-  free(head);
-  head = prev;
 
   // Traverse the tree
   OperationNode* node = start;

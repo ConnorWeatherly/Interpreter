@@ -105,7 +105,7 @@ static void _print_eval(Evaluation eval) {
 }
 
 int main(int argc, char** argv) {
-  char* str = "7 + 3 ^ 9 * 11";
+  char* str = "-5 -7 * 9 / 4";
 
   Error error;
   ParseNode* head = parse_expression(str, &error);

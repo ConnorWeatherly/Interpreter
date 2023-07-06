@@ -27,6 +27,9 @@ typedef struct {
 // Read space symbols
 bool is_space(char ch);
 
+bool parse_float(char** pos, float* num);
+bool parse_integer(char** pos, int* num);
+
 // Function for parsing all symbols
 SymbolKey parse_symbol(char** pos, Symbol* symbol);
 

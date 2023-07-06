@@ -16,7 +16,7 @@ bool is_space(char ch) {
   return false;
 }
 
-static bool _parse_open_parenthesis(char** pos) {
+static bool _parse_open_brace(char** pos) {
   // Check for open parenthesis
   if (**pos != '(') {
     return false;
@@ -26,7 +26,7 @@ static bool _parse_open_parenthesis(char** pos) {
   *pos += 1;
   return true;
 }
-static bool _parse_close_parenthesis(char** pos) {
+static bool _parse_close_brace(char** pos) {
   // Check for close parenthesis
   if (**pos != ')') {
     return false;
@@ -34,81 +34,6 @@ static bool _parse_close_parenthesis(char** pos) {
 
   // Move past close parenthesis
   *pos += 1;
-  return true;
-}
-static bool _parse_float(char** pos, float* num) {
-  // Allow for moving through string without changing position
-  char* str = *pos;
-
-  // Check if number is negative
-  bool isNeg = false;
-  if (*str == '-') {
-    isNeg = true;
-    str += 1;
-  }
-
-  // Check if number is numid
-  if (!_is_num(*str)) {
-    return false;
-  }
-
-  // Save negative number into buffer
-  *num = 0;
-  for (; _is_num(*str); str += 1) {
-    *num = 10*(*num)-(*str)+'0';
-  }
-
-  // Check the number is a float
-  if (*str != '.') {
-    return false;
-  }
-  str += 1;
-
-  // Tack on decimal values to end
-  for (float mag = 10; _is_num(*str) && mag < DBL_MAX/10; mag *= 10, str += 1) {
-    *num -= (*str-'0')/mag;
-  }
-
-  // Flip the negative value to positive
-  if (!isNeg) {
-    *num = -(*num);
-  }
-
-  // Move the position of the string to after the number
-  *pos = str;
-
-  return true;
-}
-static bool _parse_integer(char** pos, int* num) {
-  // Allow for moving through string without changing position
-  char* str = *pos;
-
-  // Check if number is negative
-  bool isNeg = false;
-  if (*str == '-') {
-    isNeg = true;
-    str += 1;
-  }
-
-  // Check if number is numid
-  if (!_is_num(*str)) {
-    return false;
-  }
-
-  // Save negative number into buffer
-  *num = 0;
-  for (; _is_num(*str); str += 1) {
-    *num = 10*(*num)-(*str)+'0';
-  }
-
-  // Flip the negative value to positive
-  if (!isNeg) {
-    *num = -(*num);
-  }
-
-  // Move the position of the string to after the number
-  *pos = str;
-
   return true;
 }
 static bool _parse_operation(char** pos, Operation* operator) {
@@ -153,6 +78,82 @@ static bool _parse_variable(char** pos, char** variable) {
   return false;
 }
 
+bool parse_float(char** pos, float* num) {
+  // Allow for moving through string without changing position
+  char* str = *pos;
+
+  // Check if number is negative
+  bool isNeg = false;
+  if (*str == '-') {
+    isNeg = true;
+    str += 1;
+  }
+
+  // Check if number is numid
+  if (!_is_num(*str)) {
+    return false;
+  }
+
+  // Save negative number into buffer
+  *num = 0;
+  for (; _is_num(*str); str += 1) {
+    *num = 10*(*num)-(*str)+'0';
+  }
+
+  // Check the number is a float
+  if (*str != '.') {
+    return false;
+  }
+  str += 1;
+
+  // Tack on decimal values to end
+  for (float mag = 10; _is_num(*str) && mag < DBL_MAX/10; mag *= 10, str += 1) {
+    *num -= (*str-'0')/mag;
+  }
+
+  // Flip the negative value to positive
+  if (!isNeg) {
+    *num = -(*num);
+  }
+
+  // Move the position of the string to after the number
+  *pos = str;
+
+  return true;
+}
+bool parse_integer(char** pos, int* num) {
+  // Allow for moving through string without changing position
+  char* str = *pos;
+
+  // Check if number is negative
+  bool isNeg = false;
+  if (*str == '-') {
+    isNeg = true;
+    str += 1;
+  }
+
+  // Check if number is numid
+  if (!_is_num(*str)) {
+    return false;
+  }
+
+  // Save negative number into buffer
+  *num = 0;
+  for (; _is_num(*str); str += 1) {
+    *num = 10*(*num)-(*str)+'0';
+  }
+
+  // Flip the negative value to positive
+  if (!isNeg) {
+    *num = -(*num);
+  }
+
+  // Move the position of the string to after the number
+  *pos = str;
+
+  return true;
+}
+
 SymbolKey parse_symbol(char** pos, Symbol* symbol) {
   // Eat blank spaces
   while (is_space(**pos)) {
@@ -160,16 +161,16 @@ SymbolKey parse_symbol(char** pos, Symbol* symbol) {
   }
 
   // Check symbol for each type
-  if (_parse_open_parenthesis(pos)) {
+  if (_parse_open_brace(pos)) {
     return OPN_PAR;
-  } else if (_parse_close_parenthesis(pos)) {
+  } else if (_parse_close_brace(pos)) {
     return CLS_PAR;
-  } else if (_parse_float(pos, &symbol->floating)) {
-    return FLT;
-  } else if (_parse_integer(pos, &symbol->integer)) {
-    return INT;
   } else if (_parse_operation(pos, &symbol->operator)) {
     return OPRTR;
+  } else if (parse_float(pos, &symbol->floating)) {
+    return FLT;
+  } else if (parse_integer(pos, &symbol->integer)) {
+    return INT;
   } else if (_parse_variable(pos, &symbol->variable)) {
     return VAR;
   }
