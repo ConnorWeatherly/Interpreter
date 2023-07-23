@@ -24,7 +24,7 @@ _abs_dbl_not_decimal(double dbl) {
 }
 
 static DataType
-_find_int_type(ASTNode* node, uint64_t num) {
+_find_int_type(ASTNode* node, int64_t num) {
   if (num == (int32_t)num) {
     node->left.value.asInt32 = num;
     return INTGR32;

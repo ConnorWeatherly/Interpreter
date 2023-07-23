@@ -101,20 +101,13 @@ static void _validate_tree(ASTNode* head) {
       fprintf(stderr, "left connection incorrect\n");
     }
     _validate_tree(head->left.branch);
-  } else {
-    // fprintf(stderr, "left: ");
-    // _print_value(head->left);
-    // fputc('\n', stderr);
   }
+
   if (head->right.dataType == BRNCH) {
     if (head->right.branch->prev != head) {
       fprintf(stderr, "right connection incorrect\n");
     }
     _validate_tree(head->right.branch);
-  } else {
-    // fprintf(stderr, "right: ");
-    // _print_value(head->right);
-    // fputc('\n', stderr);
   }
 
   return;
@@ -179,7 +172,7 @@ int main(int argc, char** argv) {
   }
 
   _validate_tree(ast.head);
-  
+
   fputs(str, stderr);
   _print_value(ast.head->left);
   fputc('\n', stderr);

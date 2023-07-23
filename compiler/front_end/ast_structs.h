@@ -54,7 +54,7 @@ typedef struct _ASTNode {
   // Values for internal checking
   union {
     const char* oprtrPos;
-    bool        isNotVisited;
+    bool*       isNotVisited;
   };
 
   // Head information of each node

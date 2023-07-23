@@ -150,9 +150,9 @@ _read_line(const char** pos, ASTNode* head, ErrorReport* report);
 
 static void
 _read_braces(const char** pos, ASTNode* prev,
-ASTBranch* node, ErrorReport* report) {
+ASTBranch* branch, ErrorReport* report) {
   // Avoid parse if no subtree needed
-  if (node->dataType != OPEN_BRACE) {
+  if (branch->dataType != OPEN_BRACE) {
     return;
   }
 
@@ -174,16 +174,16 @@ ASTBranch* node, ErrorReport* report) {
 
   // Check for single value in parenthesis
   if (head.right.dataType == NONE) {
-    *node = head.left;
+    *branch = head.left;
   } else {
     // Subtree built in parenthesis
-    node->branch  = malloc(sizeof(*node->branch));
-    *node->branch = head;
+    branch->branch  = malloc(sizeof(*branch->branch));
+    *branch->branch = head;
 
-    _connect_children_nodes(node->branch);
+    _connect_children_nodes(branch->branch);
 
-    node->dataType      = BRNCH;
-    node->branch->prev  = prev;
+    branch->dataType      = BRNCH;
+    branch->branch->prev  = prev;
   }
 
   return;
